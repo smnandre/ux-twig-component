@@ -3,7 +3,7 @@ name: 'Test UX TwigComponent with dev Twig'
 on:
   workflow_dispatch:
     inputs:
-      php:
+      php: 
         description: 'PHP version'
         required: true
         default: '8.4'
@@ -36,7 +36,7 @@ jobs:
 
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '${{ inputs.php }}'
+          php-version:  '${{ inputs.php }}'
           tools: composer:v2
           coverage: none
 
@@ -45,7 +45,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const pr = (core.getInput('pr_number') || '').trim();
+            const pr = ('${{ inputs.pr_number }}' || '').trim();
 
             if (pr !== '') {
               const n = Number(pr);
@@ -61,14 +61,14 @@ jobs:
               });
 
               core.setOutput('repo', data.head.repo.clone_url);
-              core.setOutput('ref', data.head.ref);
+              core.setOutput('ref', data.head. ref);
               core.setOutput('sha', data.head.sha);
               core.setOutput('label', `twigphp/Twig#${n} (${data.head.repo.full_name}:${data.head.ref})`);
               return;
             }
 
-            const repo = (core.getInput('twig_repo') || '').trim();
-            const ref = (core.getInput('twig_ref') || '').trim();
+            const repo = ('${{ inputs.twig_repo }}' || '').trim();
+            const ref = ('${{ inputs.twig_ref }}' || '').trim();
 
             if (repo === '' || ref === '') {
               core.setFailed('Either pr_number or (twig_repo + twig_ref) must be provided.');
