@@ -99,4 +99,4 @@ jobs:
       - name: 'Run tests'
         run: |
           set -euo pipefail
-          vendor/bin/phpunit
+          ./vendor/bin/simple-phpunit
