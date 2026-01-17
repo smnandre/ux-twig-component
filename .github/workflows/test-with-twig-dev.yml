@@ -1,0 +1,102 @@
+name: 'Test UX TwigComponent with dev Twig'
+
+on:
+  workflow_dispatch:
+    inputs:
+      php:
+        description: 'PHP version'
+        required: true
+        default: '8.4'
+
+      # Option 1: PR number on twigphp/Twig
+      pr_number:
+        description: 'Twig PR number on twigphp/Twig (leave empty to use repo/ref)'
+        required: false
+        default: ''
+
+      # Option 2: repo/ref directly
+      twig_repo:
+        description: 'Twig Git repo (fork or upstream)'
+        required: false
+        default: 'https://github.com/twigphp/Twig.git'
+      twig_ref:
+        description: 'Branch / tag / commit (e.g. main, assignment-operator, <sha>)'
+        required: false
+        default: 'main'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '${{ inputs.php }}'
+          tools: composer:v2
+          coverage: none
+
+      - name: 'Resolve Twig source (PR or repo/ref)'
+        id: twig
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = (core.getInput('pr_number') || '').trim();
+
+            if (pr !== '') {
+              const n = Number(pr);
+              if (!Number.isInteger(n) || n <= 0) {
+                core.setFailed(`Invalid pr_number: '${pr}'`);
+                return;
+              }
+
+              const { data } = await github.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
+                owner: 'twigphp',
+                repo: 'Twig',
+                pull_number: n,
+              });
+
+              core.setOutput('repo', data.head.repo.clone_url);
+              core.setOutput('ref', data.head.ref);
+              core.setOutput('sha', data.head.sha);
+              core.setOutput('label', `twigphp/Twig#${n} (${data.head.repo.full_name}:${data.head.ref})`);
+              return;
+            }
+
+            const repo = (core.getInput('twig_repo') || '').trim();
+            const ref = (core.getInput('twig_ref') || '').trim();
+
+            if (repo === '' || ref === '') {
+              core.setFailed('Either pr_number or (twig_repo + twig_ref) must be provided.');
+              return;
+            }
+
+            core.setOutput('repo', repo);
+            core.setOutput('ref', ref);
+            core.setOutput('sha', '');
+            core.setOutput('label', `${repo} @ ${ref}`);
+
+      - name: 'Inject Twig from dev source'
+        run: |
+          set -euo pipefail
+
+          echo "Twig source: ${{ steps.twig.outputs.label }}"
+          echo "Repo: ${{ steps.twig.outputs.repo }}"
+          echo "Ref:  ${{ steps.twig.outputs.ref }}"
+          if [ -n "${{ steps.twig.outputs.sha }}" ]; then
+            echo "SHA:  ${{ steps.twig.outputs.sha }}"
+          fi
+
+          composer config repositories.twig vcs '${{ steps.twig.outputs.repo }}'
+
+          composer require twig/twig:"dev-${{ steps.twig.outputs.ref }} as 3.x-dev" --no-update
+          composer update twig/twig --with-all-dependencies --no-interaction --no-progress
+
+      - name: 'Run tests'
+        run: |
+          set -euo pipefail
+          vendor/bin/phpunit
