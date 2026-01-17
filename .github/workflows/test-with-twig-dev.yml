@@ -92,7 +92,7 @@ jobs:
           fi
 
           composer config repositories.twig vcs '${{ steps.twig.outputs.repo }}'
-
+          composer update
           composer require twig/twig:"dev-${{ steps.twig.outputs.ref }} as 3.x-dev" --no-update
           composer update twig/twig --with-all-dependencies --no-interaction --no-progress
 
