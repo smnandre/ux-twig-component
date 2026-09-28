@@ -178,6 +178,33 @@ final class ComponentFactoryTest extends KernelTestCase
         $this->assertNull($metadata->get('class'));
     }
 
+    public function testLoadingAnonymousComponentFromBundleWithFallback()
+    {
+        // Component from external bundle with index.html.twig
+        $metadata = $this->factory()->metadataFor('Acme:Menu');
+        $this->assertSame('@Acme/components/Menu/index.html.twig', $metadata->getTemplate());
+        $this->assertSame('Acme:Menu', $metadata->getName());
+        $this->assertNull($metadata->get('class'));
+
+        // Component from external bundle with named .html.twig
+        $metadata = $this->factory()->metadataFor('Acme:Menu:Item');
+        $this->assertSame('@Acme/components/Menu/Item.html.twig', $metadata->getTemplate());
+        $this->assertSame('Acme:Menu:Item', $metadata->getName());
+        $this->assertNull($metadata->get('class'));
+
+        // Ensure @Acme/components/Bar.html.twig takes precedence over @Acme/components/Bar/index.html.twig
+        $metadata = $this->factory()->metadataFor('Acme:Bar');
+        $this->assertSame('@Acme/components/Bar.html.twig', $metadata->getTemplate());
+        $this->assertSame('Acme:Bar', $metadata->getName());
+        $this->assertNull($metadata->get('class'));
+
+        // Test nested component with index.html.twig
+        $metadata = $this->factory()->metadataFor('Acme:Button:Secondary');
+        $this->assertSame('@Acme/components/Button/Secondary/index.html.twig', $metadata->getTemplate());
+        $this->assertSame('Acme:Button:Secondary', $metadata->getName());
+        $this->assertNull($metadata->get('class'));
+    }
+
     public function testLoadingAnonymousComponentWithFallback()
     {
         self::bootKernel(['environment' => 'anonymous_directory']);
@@ -261,7 +288,7 @@ final class ComponentFactoryTest extends KernelTestCase
      * @testWith ["tabl", "Unknown component \"tabl\". Did you mean this: \"table\"?"]
      *           ["Basic", "Unknown component \"Basic\". Did you mean this: \"BasicComponent\"?"]
      *           ["basic", "Unknown component \"basic\". Did you mean this: \"BasicComponent\"?"]
-     *           ["with", "Unknown component \"with\". Did you mean one of these: \"with_attributes\", \"with_exposed_variables\", \"WithSlots\"?"]
+     *           ["with", "Unknown component \"with\". Did you mean one of these: \"with_attributes\", \"WithExposedTraitChild\", \"WithExposedTraitParent\", \"with_exposed_variables\", \"WithSlots\"?"]
      *           ["anonAnon", "Unknown component \"anonAnon\". And no matching anonymous component template was found."]
      */
     public function testCannotGetInvalidComponent(string $name, string $expectedExceptionMessage)
